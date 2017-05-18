@@ -14,8 +14,11 @@
 #include "particle_filter.h"
 
 using namespace std;
+std::default_random_engine generator;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
+
+
 	// Set the number of particles. Initialize all particles to first position (based on estimates of
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
@@ -69,22 +72,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
 
 }
 
-Map::single_landmark_s ParticleFilter::get_closest(const Map& map_landmarks,
-		double mapx, double mapy) {
-	// Find closest landmark to a position
-	double min_dist = numeric_limits<double>::max();
-	Map::single_landmark_s closest_landmark;
-	for (auto& landmark : map_landmarks.landmark_list) {
-		double dist_x = mapx - landmark.x_f;
-		double dist_y = mapy - landmark.y_f;
-		double dist = dist_x * dist_x + dist_y * dist_y;
-		if (dist < min_dist) {
-			min_dist = dist;
-			closest_landmark = landmark;
-		}
-	};
-	return closest_landmark;
-}
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		vector<LandmarkObs> observations, Map map_landmarks) {
@@ -113,8 +100,19 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			double mapx = particle_x + x * cos(pt) - y * sin(pt);
 			double mapy = particle_y + x * sin(pt) + y * cos(pt);
 
-			Map::single_landmark_s closest_landmark = get_closest(map_landmarks,
-					mapx, mapy);
+			// Find closest landmark to a position
+			double min_dist = numeric_limits<double>::max();
+			Map::single_landmark_s closest_landmark;
+			for (auto& landmark : map_landmarks.landmark_list) {
+				double dist_x = mapx - landmark.x_f;
+				double dist_y = mapy - landmark.y_f;
+				double dist = dist_x * dist_x + dist_y * dist_y;
+				if (dist < min_dist) {
+					min_dist = dist;
+					closest_landmark = landmark;
+				}
+			};
+
 			// Calculate weight using multivariate gaussian distribution
 			double dx = (closest_landmark.x_f - particle_x)
 					- (mapx - particle_x);
