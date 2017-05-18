@@ -97,60 +97,48 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   for the fact that the map's y-axis actually points downwards.)
 	//   http://planning.cs.uiuc.edu/node99.html
 
+	// For each particle
     for (auto &particle: particles)
     {
-        double px = particle.x;
-        double py = particle.y;
+        double particle_x = particle.x;
+        double particle_y = particle.y;
         double pt = particle.theta;
 
+        // initialize weight to 1
         double weight = 1;
 
-        //observations to map frame
-        for (int o = 0; o < observations.size(); ++o)
+        // Iterate over observed points
+        for (auto &observation: observations)
         {
-            double x = observations[o].x;
-            double y = observations[o].y;
+            double x = observation.x;
+            double y = observation.y;
 
             // Transform observation from vehicle to map coordinates
-			double mapx = px + x * cos(pt) - y * sin(pt);
-			double mapy = py + x * sin(pt) + y * cos(pt);
+			double mapx = particle_x + x * cos(pt) - y * sin(pt);
+			double mapy = particle_y + x * sin(pt) + y * cos(pt);
 
-			// Find closest landmark
-            double min_dist = LONG_MAX;
-            int min_dist_id = 0;
-            for (int l = 0; l < map_landmarks.landmark_list.size(); ++l)
-            {
-                double dx = (mapx - map_landmarks.landmark_list[l].x_f);
-                double dy = (mapy - map_landmarks.landmark_list[l].y_f);
-                double dist = dx * dx + dy * dy;
-                if (dist < min_dist)
-                {
-                    min_dist = dist;
-                    min_dist_id = l;
-                }
-            }
+			// Find closest landmark to observation
+			double min_dist = std::numeric_limits<double>::max();
+			Map::single_landmark_s closest_landmark;
+			for(auto &landmark: map_landmarks.landmark_list){
+				double dist_x = mapx - landmark.x_f;
+				double dist_y = mapy - landmark.y_f;
+				double dist = dist_x * dist_x + dist_y * dist_y;
+				if(dist < min_dist){
+					min_dist = dist;
+					closest_landmark = landmark;
+				}
+			};
 
             // Calculate weight
-            double dmx = map_landmarks.landmark_list[min_dist_id].x_f - px;
-            double dmy = map_landmarks.landmark_list[min_dist_id].y_f - py;
-            double dox = mapx - px;
-            double doy = mapy - py;
-
-            double dist_m = sqrt(dmx * dmx + dmy * dmy);
-            double dist_o = sqrt(dox * dox + doy * doy);
-
-            double ang_m = atan2(dmy, dmx);
-            double ang_o = atan2(doy, dox);
-
-            // Bivariate Gaussian
-            double num_a = (dist_m - dist_o) * (dist_m - dist_o)
-                    / (2.0 * std_landmark[0] * std_landmark[0]);
-            double num_b = (ang_m - ang_o) * (ang_m - ang_o)
-                    / (2.0 * std_landmark[1] * std_landmark[1]);
-            double numerator = exp(-1.0 * (num_a + num_b));
-            double denominator = 2.0 * M_PI * std_landmark[0] * std_landmark[1];
-
-            weight *= numerator / denominator;
+			double dx = (closest_landmark.x_f - particle_x) - (mapx - particle_x);
+			double dy = (closest_landmark.y_f - particle_y) - (mapy - particle_y);
+			double sigma_x = std_landmark[0];
+			double sigma_y = std_landmark[1];
+			double exponent = -1.0 *((dx*dx)/(2.0 * sigma_x*sigma_x) + (dy*dy)/(2.0 * sigma_y*sigma_y));
+			double num = exp(exponent);
+			double denom = 2 * M_PI * sigma_x * sigma_y;
+			weight *= num/denom;
         }
         particle.weight = weight;
         weights[particle.id] = weight;
