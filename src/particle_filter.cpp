@@ -135,6 +135,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 void ParticleFilter::resample() {
 	// Resample particles with replacement with probability proportional to their weight,
 	// using the resampling wheel algorithm.
+	// Example at: http://calebmadrigal.com/resampling-wheel-algorithm/
 	int n = weights.size();
 	double max_weight = *max_element(begin(weights), end(weights));
 	uniform_real_distribution<> rand_beta(0.0, 2.0 * max_weight);
