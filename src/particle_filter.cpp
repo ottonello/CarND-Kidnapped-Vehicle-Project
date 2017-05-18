@@ -72,65 +72,55 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
 }
 
-void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
-	// TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
-	//   observed measurement to this particular landmark.
-	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
-	//   implement this method and use it as a helper during the updateWeights phase.
+Map::single_landmark_s ParticleFilter::get_closest(const Map& map_landmarks, double mapx, double mapy) {
+	double min_dist = std::numeric_limits<double>::max();
+	Map::single_landmark_s closest_landmark;
+	for (auto& landmark : map_landmarks.landmark_list) {
+		double dist_x = mapx - landmark.x_f;
+		double dist_y = mapy - landmark.y_f;
+		double dist = dist_x * dist_x + dist_y * dist_y;
+		if (dist < min_dist) {
+			min_dist = dist;
+			closest_landmark = landmark;
+		}
+	};
+	return closest_landmark;
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		std::vector<LandmarkObs> observations, Map map_landmarks) {
-	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
-	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
-	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
-	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
-	//   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
-	//   The following is a good resource for the theory:
-	//   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
-	//   and the following is a good resource for the actual equation to implement (look at equation 
-	//   3.33. Note that you'll need to switch the minus sign in that equation to a plus to account 
-	//   for the fact that the map's y-axis actually points downwards.)
-	//   http://planning.cs.uiuc.edu/node99.html
-
-	// For each particle
+	// Update the weights of each particle using a multi-variate Gaussian distribution.
     for (auto &particle: particles)
     {
         double particle_x = particle.x;
         double particle_y = particle.y;
         double pt = particle.theta;
 
-        // initialize weight to 1
+        double sigma_x = std_landmark[0];
+		double sigma_y = std_landmark[1];
+
+        // initialize weight
         double weight = 1;
 
-        // Iterate over observed points
+        // Iterate over observations
         for (auto &observation: observations)
         {
             double x = observation.x;
             double y = observation.y;
 
-            // Transform observation from vehicle to map coordinates
+            // Transform observation from vehicle to map coordinates.
+            //   The following is a good resource for the theory:
+			//   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
+			//   and the following is a good resource for the actual equation to implement:
+			//   http://planning.cs.uiuc.edu/node99.html
 			double mapx = particle_x + x * cos(pt) - y * sin(pt);
 			double mapy = particle_y + x * sin(pt) + y * cos(pt);
 
 			// Find closest landmark to observation
-			double min_dist = std::numeric_limits<double>::max();
-			Map::single_landmark_s closest_landmark;
-			for(auto &landmark: map_landmarks.landmark_list){
-				double dist_x = mapx - landmark.x_f;
-				double dist_y = mapy - landmark.y_f;
-				double dist = dist_x * dist_x + dist_y * dist_y;
-				if(dist < min_dist){
-					min_dist = dist;
-					closest_landmark = landmark;
-				}
-			};
-
-            // Calculate weight
+			Map::single_landmark_s closest_landmark = get_closest(map_landmarks, mapx, mapy);
+            // Calculate weight using multivariate gaussian distribution
 			double dx = (closest_landmark.x_f - particle_x) - (mapx - particle_x);
 			double dy = (closest_landmark.y_f - particle_y) - (mapy - particle_y);
-			double sigma_x = std_landmark[0];
-			double sigma_y = std_landmark[1];
 			double exponent = -1.0 *((dx*dx)/(2.0 * sigma_x*sigma_x) + (dy*dy)/(2.0 * sigma_y*sigma_y));
 			double num = exp(exponent);
 			double denom = 2 * M_PI * sigma_x * sigma_y;
