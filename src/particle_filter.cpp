@@ -16,12 +16,10 @@
 using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
-	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of
+	// Set the number of particles. Initialize all particles to first position (based on estimates of
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
-	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-// TODO review number of parts
-	num_particles = 100;
+	num_particles = 1000;
 
 	double std_x, std_y, std_theta;
 	std_x = std[0];
@@ -45,10 +43,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
 void ParticleFilter::prediction(double delta_t, double std_pos[],
 		double velocity, double yaw_rate) {
-	// TODO: Add measurements to each particle and add random Gaussian noise.
-	// NOTE: When adding noise you may find normal_distribution and default_random_engine useful.
-	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
-	//  http://www.cplusplus.com/reference/random/default_random_engine/
+	// Add measurements to each particle and add random Gaussian noise.
 	double std_x = std_pos[0];
 	double std_y = std_pos[1];
 	double std_theta = std_pos[2];
@@ -76,6 +71,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
 
 Map::single_landmark_s ParticleFilter::get_closest(const Map& map_landmarks,
 		double mapx, double mapy) {
+	// Find closest landmark to a position
 	double min_dist = numeric_limits<double>::max();
 	Map::single_landmark_s closest_landmark;
 	for (auto& landmark : map_landmarks.landmark_list) {
@@ -117,7 +113,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			double mapx = particle_x + x * cos(pt) - y * sin(pt);
 			double mapy = particle_y + x * sin(pt) + y * cos(pt);
 
-			// Find closest landmark to observation
 			Map::single_landmark_s closest_landmark = get_closest(map_landmarks,
 					mapx, mapy);
 			// Calculate weight using multivariate gaussian distribution
