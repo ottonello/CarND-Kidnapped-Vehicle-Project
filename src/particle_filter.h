@@ -38,6 +38,10 @@ class ParticleFilter {
 	// Vector of weights of all particles
 	std::vector<double> weights;
 	
+	std::default_random_engine generator;
+
+	Map::single_landmark_s get_closest(const Map& map_landmarks, double mapx, double mapy);
+
 public:
 	
 	// Set of current particles
